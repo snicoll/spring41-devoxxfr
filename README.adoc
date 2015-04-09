@@ -1,0 +1,53 @@
+== Modern Enterprise Java Architectures with Spring 4.1 at Devoxx France
+
+This is a very basic sample app used during the Modern Enterprise Java Architectures with Spring 4.1 session at Devoxx France.
+
+The purpose is to show how one can easily build a message listener using AMQP.
+
+NOTE: You need a RabbitMQ server running on localhost to execute that demo. Or you could https://github.com/spring-projects/spring-boot/blob/v1.2.3.RELEASE/spring-boot-autoconfigure/src/main/java/org/springframework/boot/autoconfigure/amqp/RabbitProperties.java[configure your own RabbitMQ server] if you deviate from Boot's defaults.
+
+=== Running the app locally
+
+Just execute `mvn spring-boot:run` or execute the main class to get started. This sample app listens for new speakers via the `HandleAfterCreate` event published by _Spring Data REST_.
+
+To create a new `Speaker`, just _POST_ the following document to your local repository:
+
+```json
+{
+  "firstName": "John",
+  "lastName": "Smith",
+  "twitter": "yourTwitterAccountHere",
+  "bio": "John Smith's bio."
+}
+```
+
+something like: `curl http://user:changeme@localhost:8080/speakers -i -H "Content-type: application/json" -d @yourfile.json`, where `yourfile.json` is the name of the file holding the new Speaker representation.
+
+NOTE: `changeme` is the password specified for this simple demo; check `src/main/resources/application.properties` for more details.
+
+This should create a new `Speaker` (available from `http://localhost:8080/speakers`) but it should also intercept the event, post an AMQP message and log something to confirm that the AMQP message has been processed.
+
+=== Running the app in the cloud
+
+If you want to run that exact same app in the cloud, you need first an account with a cloud provider. At the time of writing, you can try _Pivotal Web Services_ for free for 60 days, check `https://run.pivotal.io/`
+
+Once you've registered, you should be able to use `cf t` to confirm you are connected to the right organization and space.
+
+Pushing your app to the cloud should be as easy as:
+
+* Build your app: `mvn package`
+* Create a RabbitMQ instance to use for your app: `cf create-service cloudamqp lemur my-rabbit`
+* Go in the `target` directory and create a `manifest.yml` alongside your `spring41-devoxxfr-0.0.1-SNAPSHOT.jar` to bind the RabbitMQ service to your app
+```yml
+applications:
+  - name: my-spring41-demo
+    services:
+      - my-rabbit
+```
+* Push the app: `cf push my-spring41-demo -p spring41-devoxxfr-0.0.1-SNAPSHOT.jar`
+
+NOTE: `my-spring41-demo` is the name of your app and will also be used for the default route of your app (i.e. `my-spring41-demo.cfapps.io`). If that name is taken, update the manifest and the `cf push` command accordingly.
+
+That's it, your app is in the cloud. You can now send a sample _json_ representation of a speaker on the service's URL. You can also use `cf logs my-spring41-demo` to look at the logs of the app.
+
+
